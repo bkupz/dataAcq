@@ -5,7 +5,8 @@
 
 import datetime
 import time
-import cPickle as pickle
+#import cPickle as pickle
+import msgpack
 import piplates.DAQC2plate as DAQ
 import Queue
 import threading
@@ -24,7 +25,8 @@ def write_file(fw, the_queue, the_event, stop_write):
         while (the_queue.empty()!=True):
             print("saving to file")
             L = the_queue.get(True)
-            pickle.dump(L,fw)
+            #pickle.dump(L,fw)
+            msgpack.pack(L,fw)
             reads+=1
     	print("q was empty")
     	if stop_write.isSet():
@@ -89,8 +91,11 @@ def main():
 
     p = []
     fr = open('rawdata', 'r+b')
-    for x in xrange(reads):
-        p = pickle.load(fr)        
+    #for x in xrange(reads):
+        #p = pickle.load(fr)        
+    unpacker = msgpack.Unpacker(fr)
+    for o in unpacker:
+	p+= o
 
     print('file had %d rows' % len(p))
 
