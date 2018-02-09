@@ -10,10 +10,21 @@ import msgpack
 import piplates.DAQC2plate as DAQ
 import Queue
 import threading
+import sys
 import csv
 import os
 import RPi.GPIO as GPIO
 
+def my_except_hook(exctype, value, traceback):
+    sys.__excepthook__(exctype, value, traceback)
+    GPIO.cleanup()
+    sys.exit(-1)
+
+def stop_callback(channel):
+    time.sleep(.05)
+    intNum= DAQ.getINTflags(0)
+    print("intNum was " + str(intNum))
+    kill_app.set()
 
 def write_file(fw, the_queue, the_event, stop_write):
     global reads
@@ -34,13 +45,8 @@ def write_file(fw, the_queue, the_event, stop_write):
                 print("stoping the write thread")
 	        break
 
-def stop_callback(channel):
-    time.sleep(.05)
-    intNum= DAQ.getINTflags(1)
-    print("intNum was " + str(intNum))
-    kill_app.set()
-
 def main():
+    sys.excepthook = my_except_hook
     GPIO.setup(22, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.add_event_detect(22, GPIO.FALLING, callback=stop_callback)
     DAQ.enableDINint(0, 0, 'f') 
@@ -70,8 +76,8 @@ def main():
         print("reading data")
         for y in range(1,100):
             time.sleep(.001)
-            r = DAQ.getADCall(0) + DAQ.getADCall(1) #+ DAQ.getADCall(2)
-            r.extend( [DAQ.getFREQ(0),DAQ.getFREQ(1), (time.time()-start_time)])
+            r = DAQ.getADCall(0) #+ DAQ.getADCall(1) #+ DAQ.getADCall(2)
+            r.extend( [DAQ.getFREQ(0), (time.time()-start_time)])#,DAQ.getFREQ(1)
             L.append((r))
         my_queue.put(L)
         e.set()
@@ -106,7 +112,7 @@ def main():
         writer.writerows(p)
     
     os.remove("rawdata")
-    GPIO.cleanup([22])
+    GPIO.cleanup()
 
 if __name__ == '__main__':
     main()
