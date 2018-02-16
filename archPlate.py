@@ -15,6 +15,24 @@ import csv
 import os
 import RPi.GPIO as GPIO
 
+def makeHumanReadableFile():
+    p = []
+    fr = open('rawdata', 'r+b')
+       
+    unpacker = msgpack.Unpacker(fr)
+    for o in unpacker:
+	p+= o
+
+    print('file had %d rows' % len(p))
+
+
+    fnCsv = '{:%Y-%m-%d~%H:%M:%S}.csv'.format(datetime.datetime.now())
+    with open(fnCsv, "w+") as f:
+        writer = csv.writer(f)
+        writer.writerows(p)
+    
+    os.remove("rawdata")
+
 def my_except_hook(exctype, value, traceback):
     sys.__excepthook__(exctype, value, traceback)
     GPIO.cleanup()
@@ -36,7 +54,6 @@ def write_file(fw, the_queue, the_event, stop_write):
         while (the_queue.empty()!=True):
             print("saving to file")
             L = the_queue.get(True)
-            #pickle.dump(L,fw)
             msgpack.pack(L,fw)
             reads+=1
     	print("q was empty")
@@ -55,9 +72,12 @@ def main():
     L = list()
 
     global kill_app
+    global fw
+    global fn
 
+    fn = '{:%Y-%m-%d~%H:%M:%S}.RAW'.format(datetime.datetime.now())
     stop_write = threading.Event()
-    fw = open('rawdata','ab')
+    fw = open(fn,'ab')
     stop_read = threading.Event()
     kill_app = threading.Event()
 
@@ -76,8 +96,11 @@ def main():
         print("reading data")
         for y in range(1,100):
             time.sleep(.001)
-            r = DAQ.getADCall(0) #+ DAQ.getADCall(1) #+ DAQ.getADCall(2)
-            r.extend( [DAQ.getFREQ(0), (time.time()-start_time)])#,DAQ.getFREQ(1)
+	    try:
+                r = DAQ.getADCall(0) + DAQ.getADCall(1) + DAQ.getADCall(2) + DAQ.getADCall(7)
+            except IndexError:
+                print("indexError occured")
+            r.extend( [DAQ.getFREQ(0),DAQ.getFREQ(1),DAQ.getFREQ(2),DAQ.getFREQ(7), (time.time()-start_time)])#,DAQ.getFREQ(1)
             L.append((r))
         my_queue.put(L)
         e.set()
@@ -94,24 +117,8 @@ def main():
     fw.close()
     print("worker joined")  
     
+    #makeHumanReadableFile()
 
-    p = []
-    fr = open('rawdata', 'r+b')
-    #for x in xrange(reads):
-        #p = pickle.load(fr)        
-    unpacker = msgpack.Unpacker(fr)
-    for o in unpacker:
-	p+= o
-
-    print('file had %d rows' % len(p))
-
-
-    fn = '{:%Y-%m-%d~%H:%M:%S}.csv'.format(datetime.datetime.now())
-    with open(fn, "w+") as f:
-        writer = csv.writer(f)
-        writer.writerows(p)
-    
-    os.remove("rawdata")
     GPIO.cleanup()
 
 if __name__ == '__main__':
