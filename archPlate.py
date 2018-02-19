@@ -69,8 +69,6 @@ def main():
     DAQ.enableDINint(0, 0, 'f') 
     DAQ.intEnable(0)
 
-    L = list()
-
     global kill_app
     global fw
     global fn
@@ -94,6 +92,7 @@ def main():
 
     while not kill_app.isSet():
         print("reading data")
+	L = []
         for y in range(1,100):
             time.sleep(.001)
 	    try:
