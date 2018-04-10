@@ -71,6 +71,11 @@ def main():
     ButtonPlate = 0
     sys.excepthook = my_except_hook
 
+    GPIO.setup(22, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.add_event_detect(22, GPIO.FALLING, callback=stop_callback)
+    DAQ.enableDINint(0, 0, 'f') 
+    DAQ.intEnable(0)
+
     global kill_app
     global fw
     global fn
@@ -113,7 +118,6 @@ def main():
             r.extend( [DAQ.getFREQ(0),DAQ.getFREQ(1),DAQ.getFREQ(2),DAQ.getFREQ(3),bno.read_linear_acceleration(),bno.read_quaternion(), (time.time()-start_time)])
 	    L.append((r))
         my_queue.put(L)
-        e.set()
 	######check for stop signal#############
 	try:
             offSignal = DAQ.getDINbit(ButtonPlate, 1)
@@ -123,6 +127,7 @@ def main():
         if offSignal == 1:
 	    kill_app.set()
 	######################################## 
+        e.set()
         #if time.time() > (start_time+(10*60)):
 	    #kill_app.set()
 
