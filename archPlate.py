@@ -10,9 +10,7 @@ import piplates.DAQC2plate as DAQ
 import Queue
 import threading
 import sys, traceback
-import csv
 import LED
-import os
 import RPi.GPIO as GPIO
 from Adafruit_BNO055 import BNO055
 
